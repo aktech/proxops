@@ -172,7 +172,7 @@ func TestGenerateTraefikRoutes(t *testing.T) {
 
 	// Create the routing dir structure
 	routingDir := filepath.Join(tmpDir, "traefik", "routing-site1")
-	os.MkdirAll(routingDir, 0755)
+	_ = os.MkdirAll(routingDir, 0755)
 
 	changed, err := gen.generateTraefikRoutes(sf, "site1")
 	if err != nil {

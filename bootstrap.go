@@ -44,7 +44,7 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, ip string, vm *VMConfig, r
 	if err != nil {
 		return fmt.Errorf("SSH connect to %s: %w", ip, err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	primary := vm.PrimaryService()
 	homeDir := fmt.Sprintf("/home/%s", b.user)
@@ -85,7 +85,7 @@ func (b *Bootstrapper) IsDocoCDRunning(ip string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	output, err := b.runCommand(client, "sg docker -c \"docker ps --format '{{.Names}}'\" 2>/dev/null")
 	if err != nil {
@@ -144,7 +144,7 @@ func (b *Bootstrapper) runCommand(client *ssh.Client, cmd string) (string, error
 	if err != nil {
 		return "", fmt.Errorf("create session: %w", err)
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	output, err := session.CombinedOutput(cmd)
 	return strings.TrimSpace(string(output)), err

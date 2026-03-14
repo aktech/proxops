@@ -122,7 +122,7 @@ func (u *Updater) fetchRelease(tagOrLatest string) (*githubRelease, error) {
 	if err != nil {
 		return nil, fmt.Errorf("fetch release: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API returned %d for %s", resp.StatusCode, tagOrLatest)
@@ -157,7 +157,7 @@ func (u *Updater) downloadAndReplace(release *githubRelease) error {
 	if err != nil {
 		return fmt.Errorf("download: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download returned %d", resp.StatusCode)
@@ -182,7 +182,7 @@ func (u *Updater) downloadAndReplace(release *githubRelease) error {
 	}
 
 	if err := os.Rename(tmpPath, execPath); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 		return fmt.Errorf("replace binary: %w", err)
 	}
 
@@ -194,7 +194,7 @@ func extractBinaryFromTarGz(r io.Reader, name string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gzip: %w", err)
 	}
-	defer gz.Close()
+	defer func() { _ = gz.Close() }()
 
 	tr := tar.NewReader(gz)
 	for {

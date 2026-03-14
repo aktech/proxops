@@ -122,7 +122,7 @@ func (r *Reconciler) repairVMNetworking(vms map[string]*VMConfig) {
 		// Quick TCP check on port 22
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:22", vm.StaticIP), 5*time.Second)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			continue
 		}
 
