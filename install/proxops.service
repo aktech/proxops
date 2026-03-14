@@ -1,19 +1,19 @@
 [Unit]
-Description=ProxPilot — GitOps VM lifecycle manager for Proxmox
+Description=ProxOps — GitOps VM lifecycle manager for Proxmox
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/proxpilot -config /opt/proxpilot/config.yml
+ExecStart=/usr/local/bin/proxops -config /opt/proxops/config.yml
 Restart=always
 RestartSec=10
-WorkingDirectory=/opt/proxpilot
+WorkingDirectory=/opt/proxops
 
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=proxpilot
+SyslogIdentifier=proxops
 
 [Install]
 WantedBy=multi-user.target

@@ -26,13 +26,13 @@ type cycleResult struct {
 }
 
 func main() {
-	configPath := flag.String("config", "/opt/proxpilot/config.yml", "path to config file")
+	configPath := flag.String("config", "/opt/proxops/config.yml", "path to config file")
 	once := flag.Bool("once", false, "run one reconciliation cycle and exit")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("proxpilot %s (%s)\n", version, commit)
+		fmt.Printf("proxops %s (%s)\n", version, commit)
 		os.Exit(0)
 	}
 
@@ -46,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("proxpilot starting",
+	logger.Info("proxops starting",
 		"location", cfg.Location,
 		"poll_interval", cfg.PollInterval,
 		"repo_dir", cfg.RepoDir,
@@ -174,9 +174,9 @@ func runCycle(ctx context.Context, cfg *Config, git *GitOps, reconciler *Reconci
 	// Update web dashboard with latest services data
 	ws.UpdateServices(services)
 
-	// 3. Self-update: if services.yml declares a proxpilot_version, match it immediately
-	if services.ProxPilotVersion != "" {
-		if updater.UpdateToVersion(services.ProxPilotVersion) {
+	// 3. Self-update: if services.yml declares a proxops_version, match it immediately
+	if services.ProxOpsVersion != "" {
+		if updater.UpdateToVersion(services.ProxOpsVersion) {
 			return cycleResult{Updated: true}, nil
 		}
 	} else if cfg.AutoUpdate {
@@ -242,11 +242,11 @@ func runCycle(ctx context.Context, cfg *Config, git *GitOps, reconciler *Reconci
 
 	pushed := false
 	if hasChanges {
-		msg := "proxpilot: update configs"
+		msg := "proxops: update configs"
 		if len(result.NewVMs) > 0 {
-			msg = fmt.Sprintf("proxpilot: provision VMs %v", result.NewVMs)
+			msg = fmt.Sprintf("proxops: provision VMs %v", result.NewVMs)
 		} else if configsChanged {
-			msg = "proxpilot: regenerate configs"
+			msg = "proxops: regenerate configs"
 		}
 		if err := git.CommitAndPush(msg); err != nil {
 			logger.Warn("commit and push failed (non-fatal)", "error", err)

@@ -15,7 +15,7 @@ type ServicesFile struct {
 	GlobalServices   []VMService                  `yaml:"global_services,omitempty"`
 	VMs              map[string]*VMConfig         `yaml:"vms"`
 	Devices          map[string][]DeviceRoute     `yaml:"devices"`
-	ProxPilotVersion string                       `yaml:"proxpilot_version,omitempty"`
+	ProxOpsVersion string                       `yaml:"proxops_version,omitempty"`
 }
 
 // AllServices returns a VM's services with global services appended.

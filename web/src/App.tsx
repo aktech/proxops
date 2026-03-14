@@ -78,7 +78,7 @@ function Header({ status }: { status: Status }) {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">P</span>
           </div>
-          <h1 className="text-xl font-semibold text-slate-900">ProxPilot</h1>
+          <h1 className="text-xl font-semibold text-slate-900">ProxOps</h1>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-1 bg-primary-light text-primary text-sm font-medium rounded-full">

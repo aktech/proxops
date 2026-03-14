@@ -164,7 +164,7 @@ func (u *Updater) downloadAndReplace(release *githubRelease) error {
 	}
 
 	// Extract binary from tar.gz
-	binaryData, err := extractBinaryFromTarGz(resp.Body, "proxpilot")
+	binaryData, err := extractBinaryFromTarGz(resp.Body, "proxops")
 	if err != nil {
 		return fmt.Errorf("extract: %w", err)
 	}

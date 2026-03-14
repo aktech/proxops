@@ -26,7 +26,7 @@ type CycleRecord struct {
 	Error         string    `json:"error,omitempty"`
 }
 
-// WebServer serves the ProxPilot dashboard UI and API.
+// WebServer serves the ProxOps dashboard UI and API.
 type WebServer struct {
 	config    *Config
 	mu        sync.RWMutex

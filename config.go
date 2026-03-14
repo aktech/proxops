@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the provisioner config file (e.g. /opt/proxpilot/config.yml).
+// Config represents the provisioner config file (e.g. /opt/proxops/config.yml).
 type Config struct {
 	Location     string        `yaml:"location"`
 	RepoURL      string        `yaml:"repo_url"`
@@ -62,21 +62,21 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	cfg := &Config{
 		PollInterval:   60 * time.Second,
-		RepoDir:        "/opt/proxpilot/repo",
+		RepoDir:        "/opt/proxops/repo",
 		DefaultUser:    "ubuntu",
-		DataDir:        "/opt/proxpilot",
+		DataDir:        "/opt/proxops",
 		DocoCDImage:    "ghcr.io/kimdre/doco-cd:0.67.1",
 		GitReference:   "refs/heads/main",
 		DocoCDInterval: 120,
 		Timezone:       "UTC",
-		CommitterEmail: "proxpilot@localhost",
-		CommitterName:  "proxpilot",
+		CommitterEmail: "proxops@localhost",
+		CommitterName:  "proxops",
 		VMIDStart:      100,
 		VMIDEnd:        999,
 		IPRangeStart:   220,
 		IPRangeEnd:     254,
 		AutoUpdate:     false,
-		UpdateRepo:     "aktech/proxpilot",
+		UpdateRepo:     "aktech/proxops",
 		UpdateInterval: 1 * time.Hour,
 		WebPort:        9100,
 	}

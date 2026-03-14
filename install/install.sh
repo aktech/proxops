@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# One-time install script for proxpilot on a Proxmox host.
-# Prerequisites: config.yml and SSH key already in /opt/proxpilot/
+# One-time install script for proxops on a Proxmox host.
+# Prerequisites: config.yml and SSH key already in /opt/proxops/
 
-REPO="aktech/proxpilot"
+REPO="aktech/proxops"
 INSTALL_DIR="/usr/local/bin"
-CONFIG_DIR="/opt/proxpilot"
-SERVICE_FILE="/etc/systemd/system/proxpilot.service"
+CONFIG_DIR="/opt/proxops"
+SERVICE_FILE="/etc/systemd/system/proxops.service"
 
 ARCH=$(uname -m)
 case "$ARCH" in
@@ -15,7 +15,7 @@ case "$ARCH" in
   aarch64) ARCH="arm64" ;;
 esac
 
-echo "==> Downloading latest proxpilot binary (linux/${ARCH})..."
+echo "==> Downloading latest proxops binary (linux/${ARCH})..."
 DOWNLOAD_URL=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
   | grep -o "\"browser_download_url\": *\"[^\"]*linux_${ARCH}[^\"]*tar.gz\"" \
   | head -1 \
@@ -28,9 +28,9 @@ fi
 
 TMP=$(mktemp -d)
 curl -fsSL "$DOWNLOAD_URL" | tar -xz -C "$TMP"
-install -m 0755 "$TMP/proxpilot" "${INSTALL_DIR}/proxpilot"
+install -m 0755 "$TMP/proxops" "${INSTALL_DIR}/proxops"
 rm -rf "$TMP"
-echo "    Installed to ${INSTALL_DIR}/proxpilot"
+echo "    Installed to ${INSTALL_DIR}/proxops"
 
 echo "==> Checking config..."
 if [ ! -f "${CONFIG_DIR}/config.yml" ]; then
@@ -40,8 +40,8 @@ if [ ! -f "${CONFIG_DIR}/config.yml" ]; then
 fi
 
 echo "==> Installing systemd service..."
-cp "$(dirname "$0")/proxpilot.service" "$SERVICE_FILE"
+cp "$(dirname "$0")/proxops.service" "$SERVICE_FILE"
 systemctl daemon-reload
-systemctl enable --now proxpilot
+systemctl enable --now proxops
 
-echo "==> Done! Check status with: journalctl -u proxpilot -f"
+echo "==> Done! Check status with: journalctl -u proxops -f"

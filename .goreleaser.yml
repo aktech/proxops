@@ -1,6 +1,6 @@
 version: 2
 
-project_name: proxpilot
+project_name: proxops
 
 before:
   hooks:
@@ -8,8 +8,8 @@ before:
     - sh -c "cd web && npm ci && npm run build"
 
 builds:
-  - id: proxpilot
-    binary: proxpilot
+  - id: proxops
+    binary: proxops
     env:
       - CGO_ENABLED=0
     goos:
@@ -23,7 +23,7 @@ builds:
       - -X main.commit={{.Commit}}
 
 archives:
-  - id: proxpilot
+  - id: proxops
     formats:
       - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
@@ -41,4 +41,4 @@ changelog:
 release:
   github:
     owner: aktech
-    name: proxpilot
+    name: proxops

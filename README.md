@@ -1,10 +1,10 @@
-# ProxPilot
+# ProxOps
 
 GitOps VM lifecycle manager for Proxmox. Runs on your Proxmox host, continuously reconciling desired state from a Git repo into running VMs with Docker Compose services.
 
 ## What it does
 
-ProxPilot runs a reconciliation loop:
+ProxOps runs a reconciliation loop:
 
 1. **Git pull** — fetches latest from your infrastructure repo
 2. **Load services** — reads `services.yml` (single source of truth)
@@ -13,7 +13,7 @@ ProxPilot runs a reconciliation loop:
 5. **Generate configs** — writes Doco-CD poll configs and Traefik routing rules
 6. **Commit & push** — pushes generated configs back to the repo
 
-To add a new service, you add an entry to `services.yml` and push. ProxPilot handles the rest.
+To add a new service, you add an entry to `services.yml` and push. ProxOps handles the rest.
 
 ## Prerequisites
 
@@ -27,26 +27,26 @@ To add a new service, you add an entry to `services.yml` and push. ProxPilot han
 ### From release
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/aktech/proxpilot/main/install/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/aktech/proxops/main/install/install.sh | sudo bash
 ```
 
 Or manually:
 
 ```bash
 # Download latest release
-curl -fsSL https://github.com/aktech/proxpilot/releases/latest/download/proxpilot_<version>_linux_amd64.tar.gz | tar -xz
-sudo install -m 0755 proxpilot /usr/local/bin/proxpilot
+curl -fsSL https://github.com/aktech/proxops/releases/latest/download/proxops_<version>_linux_amd64.tar.gz | tar -xz
+sudo install -m 0755 proxops /usr/local/bin/proxops
 ```
 
 ### From source
 
 ```bash
-go install github.com/aktech/proxpilot@latest
+go install github.com/aktech/proxops@latest
 ```
 
 ## Configuration
 
-Create `/opt/proxpilot/config.yml`:
+Create `/opt/proxops/config.yml`:
 
 ```yaml
 # Required
@@ -61,20 +61,20 @@ proxmox:
   node: pve
 
 # Auth
-ssh_private_key: /opt/proxpilot/id_ed25519
+ssh_private_key: /opt/proxops/id_ed25519
 git_access_token: <your-git-token>
 
 # Optional (shown with defaults)
-repo_dir: /opt/proxpilot/repo     # Where to clone the repo locally
+repo_dir: /opt/proxops/repo     # Where to clone the repo locally
 poll_interval: 60s                 # How often to run reconciliation
 default_user: ubuntu               # SSH user for VMs
-data_dir: /opt/proxpilot           # Data directory on VMs
+data_dir: /opt/proxops           # Data directory on VMs
 timezone: UTC                      # Timezone for Doco-CD containers
 doco_cd_image: ghcr.io/kimdre/doco-cd:0.67.1
 git_reference: refs/heads/main
 doco_cd_poll_interval: 120         # Doco-CD poll interval in seconds
-committer_email: proxpilot@localhost
-committer_name: proxpilot
+committer_email: proxops@localhost
+committer_name: proxops
 vmid_start: 100                    # VMID allocation range
 vmid_end: 999
 ip_range_start: 220                # Static IP last-octet range
@@ -82,27 +82,27 @@ ip_range_end: 254
 
 # Self-update (disabled by default)
 auto_update: true                  # Check GitHub releases and update in-place
-update_repo: aktech/proxpilot      # GitHub owner/repo to check
+update_repo: aktech/proxops      # GitHub owner/repo to check
 update_interval: 1h                # How often to check for updates
 ```
 
 ### Self-update
 
-ProxPilot can update itself without any network access to the Proxmox host. Two modes:
+ProxOps can update itself without any network access to the Proxmox host. Two modes:
 
 **Pin a version in `services.yml` (recommended):**
 
 ```yaml
-proxpilot_version: "0.3.0"
+proxops_version: "0.3.0"
 ```
 
-On every reconciliation cycle, after `git pull`, ProxPilot checks if the running version matches `proxpilot_version`. If not, it downloads that exact version from GitHub releases, atomically replaces its own binary, and exits. Systemd `Restart=always` starts the new version automatically.
+On every reconciliation cycle, after `git pull`, ProxOps checks if the running version matches `proxops_version`. If not, it downloads that exact version from GitHub releases, atomically replaces its own binary, and exits. Systemd `Restart=always` starts the new version automatically.
 
-To upgrade: bump `proxpilot_version` in `services.yml` and push. To rollback: set it back to the old version.
+To upgrade: bump `proxops_version` in `services.yml` and push. To rollback: set it back to the old version.
 
 **Auto-update to latest (`auto_update: true` in config.yml):**
 
-When no `proxpilot_version` is set in `services.yml`, and `auto_update` is enabled in the local config, ProxPilot periodically checks GitHub releases for the latest version (rate-limited by `update_interval`, default 1h).
+When no `proxops_version` is set in `services.yml`, and `auto_update` is enabled in the local config, ProxOps periodically checks GitHub releases for the latest version (rate-limited by `update_interval`, default 1h).
 
 ## services.yml
 
@@ -177,24 +177,24 @@ devices:
 
 ```bash
 # The install script sets this up automatically, or manually:
-sudo cp install/proxpilot.service /etc/systemd/system/
+sudo cp install/proxops.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now proxpilot
+sudo systemctl enable --now proxops
 
 # View logs
-journalctl -u proxpilot -f
+journalctl -u proxops -f
 ```
 
 ### One-shot mode
 
 ```bash
-proxpilot -config /opt/proxpilot/config.yml -once
+proxops -config /opt/proxops/config.yml -once
 ```
 
 ### CLI flags
 
 ```
--config string    path to config file (default "/opt/proxpilot/config.yml")
+-config string    path to config file (default "/opt/proxops/config.yml")
 -once             run one reconciliation cycle and exit
 -version          print version and exit
 ```
@@ -205,7 +205,7 @@ proxpilot -config /opt/proxpilot/config.yml -once
 2. Add a VM entry to `services.yml` with services and routes
 3. Push to main
 
-ProxPilot will automatically:
+ProxOps will automatically:
 - Assign a VMID and static IP
 - Create the VM via OpenTofu
 - Bootstrap it with Docker and Doco-CD

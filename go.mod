@@ -1,4 +1,4 @@
-module github.com/aktech/proxpilot
+module github.com/aktech/proxops
 
 go 1.25
 
