@@ -37,6 +37,11 @@ type Config struct {
 	VMIDEnd      int `yaml:"vmid_end"`
 	IPRangeStart int `yaml:"ip_range_start"`
 	IPRangeEnd   int `yaml:"ip_range_end"`
+
+	// Self-update
+	AutoUpdate      bool   `yaml:"auto_update"`
+	UpdateRepo      string `yaml:"update_repo"`
+	UpdateInterval  time.Duration `yaml:"update_interval"`
 }
 
 type ProxmoxConfig struct {
@@ -67,6 +72,9 @@ func LoadConfig(path string) (*Config, error) {
 		VMIDEnd:        999,
 		IPRangeStart:   220,
 		IPRangeEnd:     254,
+		AutoUpdate:     false,
+		UpdateRepo:     "aktech/proxpilot",
+		UpdateInterval: 1 * time.Hour,
 	}
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)

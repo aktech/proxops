@@ -79,7 +79,18 @@ vmid_start: 100                    # VMID allocation range
 vmid_end: 999
 ip_range_start: 220                # Static IP last-octet range
 ip_range_end: 254
+
+# Self-update (disabled by default)
+auto_update: true                  # Check GitHub releases and update in-place
+update_repo: aktech/proxpilot      # GitHub owner/repo to check
+update_interval: 1h                # How often to check for updates
 ```
+
+### Self-update
+
+When `auto_update: true`, ProxPilot periodically checks GitHub releases for a newer version. If found, it downloads the binary, atomically replaces itself, and exits. Since systemd has `Restart=always`, the new version starts automatically — no SSH access or manual intervention required.
+
+To trigger an update: push a new tag (e.g. `v0.2.0`) to the `update_repo`. ProxPilot will pick it up within `update_interval`.
 
 ## services.yml
 

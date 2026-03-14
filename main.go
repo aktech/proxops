@@ -70,6 +70,11 @@ func main() {
 	gen := NewGenerator(cfg, logger)
 	reconciler := NewReconciler(tofu, cfg, logger)
 
+	var updater *Updater
+	if cfg.AutoUpdate {
+		updater = NewUpdater(cfg.UpdateRepo, cfg.UpdateInterval, logger)
+	}
+
 	// Ensure repo is cloned
 	if err := git.EnsureCloned(); err != nil {
 		logger.Error("failed to clone repo", "error", err)
@@ -99,6 +104,12 @@ func main() {
 			logger.Info("shutting down")
 			return
 		case <-ticker.C:
+			// Self-update check (rate-limited internally by UpdateInterval)
+			if updater != nil && updater.CheckAndUpdate() {
+				logger.Info("binary updated, exiting for systemd restart")
+				os.Exit(0)
+			}
+
 			if err := runCycle(ctx, cfg, git, reconciler, bootstrapper, gen, logger); err != nil {
 				logger.Error("reconciliation failed", "error", err)
 			}
