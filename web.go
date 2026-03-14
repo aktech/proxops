@@ -186,14 +186,7 @@ func (ws *WebServer) handleVMs(w http.ResponseWriter, r *http.Request) {
 
 		routes := make([]routeResponse, 0, len(vm.Routes))
 		for _, rt := range vm.Routes {
-			routes = append(routes, routeResponse{
-				Name:      rt.Name,
-				Subdomain: rt.Subdomain,
-				Port:      rt.Port,
-				Protocol:  rt.Protocol,
-				URL:       rt.URL,
-				Auth:      rt.Auth,
-			})
+			routes = append(routes, routeResponse(rt))
 		}
 
 		resp.VMs[name] = vmResponse{
@@ -234,7 +227,7 @@ func (ws *WebServer) handleCycles(w http.ResponseWriter, r *http.Request) {
 
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 // spaHandler serves embedded static files, falling back to index.html for unknown paths.
@@ -247,7 +240,7 @@ func spaHandler(root http.FileSystem) http.Handler {
 			if err != nil {
 				r.URL.Path = "/"
 			} else {
-				f.Close()
+				_ = f.Close()
 			}
 		}
 		fileServer.ServeHTTP(w, r)
