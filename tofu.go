@@ -28,6 +28,7 @@ type TofuVM struct {
 	Cores    int      `json:"cores"`
 	MemoryMB int      `json:"memory_mb"`
 	DiskGB   int      `json:"disk_gb"`
+	CPUType  string   `json:"cpu_type"`
 	StaticIP string   `json:"static_ip"`
 }
 
@@ -77,6 +78,7 @@ func (t *TofuRunner) GenerateVars(services *ServicesFile, location string, proxm
 			Cores:    vm.EffectiveCores(services.VMDefaults),
 			MemoryMB: vm.EffectiveMemoryMB(services.VMDefaults),
 			DiskGB:   vm.EffectiveDiskGB(services.VMDefaults),
+			CPUType:  vm.EffectiveCPUType(services.VMDefaults),
 			StaticIP: vm.StaticIP,
 		}
 	}

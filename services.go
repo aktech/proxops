@@ -49,6 +49,7 @@ type VMDefaults struct {
 	Cores        int    `yaml:"cores"`
 	MemoryMB     int    `yaml:"memory_mb"`
 	DiskGB       int    `yaml:"disk_gb"`
+	CPUType      string `yaml:"cpu_type"`
 	AnsibleUser  string `yaml:"ansible_user"`
 }
 
@@ -59,6 +60,7 @@ type VMConfig struct {
 	Cores     int         `yaml:"cores,omitempty"`
 	MemoryMB  int         `yaml:"memory_mb,omitempty"`
 	DiskGB    int         `yaml:"disk_gb,omitempty"`
+	CPUType   string      `yaml:"cpu_type,omitempty"`
 	Services  []VMService `yaml:"services"`
 	Routes    []VMRoute   `yaml:"routes,omitempty"`
 }
@@ -154,6 +156,14 @@ func (vm *VMConfig) EffectiveDiskGB(defaults VMDefaults) int {
 		return vm.DiskGB
 	}
 	return defaults.DiskGB
+}
+
+// EffectiveCPUType returns the VM's CPU type or the default.
+func (vm *VMConfig) EffectiveCPUType(defaults VMDefaults) string {
+	if vm.CPUType != "" {
+		return vm.CPUType
+	}
+	return defaults.CPUType
 }
 
 // BackendURL builds the backend URL for a route given the VM's static IP.
