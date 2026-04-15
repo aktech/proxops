@@ -50,6 +50,11 @@ func (g *Generator) GenerateAll(services *ServicesFile, location string) (bool, 
 
 // generateDocoCDConfigs writes docker-compose.doco-cd.yml and doco-cd-poll.yml for a VM.
 func (g *Generator) generateDocoCDConfigs(vmName string, vm *VMConfig, services *ServicesFile) (bool, error) {
+	if len(vm.Services) == 0 {
+		// VM runs no docker services (e.g. a bare SSH/systemd VM) — nothing
+		// for doco-cd to manage here.
+		return false, nil
+	}
 	primary := vm.PrimaryService()
 	serviceDir := filepath.Join(g.cfg.RepoDir, primary.ServiceDir)
 
