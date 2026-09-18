@@ -37,8 +37,8 @@ func NewBootstrapper(keyPath, user, gitToken, dataDir string, logger *slog.Logge
 }
 
 // Bootstrap installs Docker, clones the repo, deploys env, and starts Doco-CD on a new VM.
-func (b *Bootstrapper) Bootstrap(ctx context.Context, ip string, vm *VMConfig, repoURL string) error {
-	b.logger.Info("bootstrapping VM", "ip", ip, "service", vm.PrimaryService().ServiceDir)
+func (b *Bootstrapper) Bootstrap(ctx context.Context, ip, vmName, repoURL string) error {
+	b.logger.Info("bootstrapping VM", "vm", vmName, "ip", ip)
 
 	client, err := b.sshConnect(ip)
 	if err != nil {
@@ -46,9 +46,9 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, ip string, vm *VMConfig, r
 	}
 	defer func() { _ = client.Close() }()
 
-	primary := vm.PrimaryService()
 	homeDir := fmt.Sprintf("/home/%s", b.user)
 	repoDir := fmt.Sprintf("%s/repo", homeDir)
+	docoDir := fmt.Sprintf("%s/%s", repoDir, docoCDDir(vmName))
 	envFilePath := fmt.Sprintf("%s/doco-cd.env", b.dataDir)
 
 	commands := []struct {
@@ -60,8 +60,8 @@ func (b *Bootstrapper) Bootstrap(ctx context.Context, ip string, vm *VMConfig, r
 		{"clone repo", fmt.Sprintf("git clone --depth 1 %s %s || (cd %s && git pull)", repoURL, repoDir, repoDir)},
 		{"write doco-cd.env", fmt.Sprintf("echo 'GIT_ACCESS_TOKEN=%s' | sudo tee %s > /dev/null", b.token, envFilePath)},
 		{"ensure docker group", fmt.Sprintf("sudo usermod -aG docker %s", b.user)},
-		{"stop existing doco-cd", fmt.Sprintf("sg docker -c 'cd %s/%s && docker compose -p doco-cd -f docker-compose.doco-cd.yml down --remove-orphans' 2>/dev/null || true", repoDir, primary.ServiceDir)},
-		{"start doco-cd", fmt.Sprintf("sg docker -c 'cd %s/%s && docker compose -p doco-cd -f docker-compose.doco-cd.yml up -d'", repoDir, primary.ServiceDir)},
+		{"stop existing doco-cd", fmt.Sprintf("sg docker -c 'cd %s && docker compose -p doco-cd -f docker-compose.yml down --remove-orphans' 2>/dev/null || true", docoDir)},
+		{"start doco-cd", fmt.Sprintf("sg docker -c 'cd %s && docker compose -p doco-cd -f docker-compose.yml up -d'", docoDir)},
 	}
 
 	for _, c := range commands {

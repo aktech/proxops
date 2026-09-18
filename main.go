@@ -207,8 +207,8 @@ func runCycle(ctx context.Context, cfg *Config, git *GitOps, reconciler *Reconci
 	// 7. Bootstrap VMs that need it (new VMs or VMs where doco-cd isn't running)
 	localVMs := services.VMsForLocation(cfg.Location)
 	for vmName, vm := range localVMs {
-		if vm.StaticIP == "" {
-			continue
+		if vm.StaticIP == "" || len(vm.Services) == 0 {
+			continue // no doco-cd on VMs without docker services
 		}
 		needsBootstrap := contains(result.NewVMs, vmName)
 		if !needsBootstrap {
@@ -222,7 +222,7 @@ func runCycle(ctx context.Context, cfg *Config, git *GitOps, reconciler *Reconci
 		}
 		if needsBootstrap {
 			logger.Info("bootstrapping VM (doco-cd not running)", "vm", vmName)
-			if err := bootstrapper.Bootstrap(ctx, vm.StaticIP, vm, cfg.RepoURL); err != nil {
+			if err := bootstrapper.Bootstrap(ctx, vm.StaticIP, vmName, cfg.RepoURL); err != nil {
 				logger.Error("bootstrap failed", "vm", vmName, "error", err)
 			}
 		}

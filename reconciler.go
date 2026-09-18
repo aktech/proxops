@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"os/exec"
+	"sort"
 	"time"
 )
 
@@ -90,17 +91,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, services *ServicesFile) (*Re
 		return result, fmt.Errorf("tofu init: %w", err)
 	}
 
-	hasChanges, err := r.tofu.Plan(ctx)
-	if err != nil {
-		return result, fmt.Errorf("tofu plan: %w", err)
+	if err := r.adoptExistingVMs(ctx, localVMs, pxHost.Node); err != nil {
+		return result, fmt.Errorf("adopt existing VMs: %w", err)
 	}
 
-	if hasChanges {
-		if err := r.tofu.Apply(ctx); err != nil {
-			return result, fmt.Errorf("tofu apply: %w", err)
-		}
-		result.TofuApplied = true
-	} else {
+	applied, err := r.tofu.PlanAndApply(ctx)
+	if err != nil {
+		return result, fmt.Errorf("tofu: %w", err)
+	}
+	result.TofuApplied = applied
+	if !applied {
 		r.logger.Info("tofu: no changes needed")
 	}
 
@@ -197,6 +197,93 @@ func (r *Reconciler) waitForIP(expectedIP string, vmid int, timeout time.Duratio
 		}
 	}
 	return false
+}
+
+// adoptExistingVMs imports VMs that exist on this Proxmox node but are missing
+// from tofu state, so tofu manages them instead of trying to create them again.
+func (r *Reconciler) adoptExistingVMs(ctx context.Context, vms map[string]*VMConfig, node string) error {
+	stateAddrs, err := r.tofu.StateList(ctx)
+	if err != nil {
+		return err
+	}
+	onProxmox, err := proxmoxVMs(ctx, node)
+	if err != nil {
+		return err
+	}
+	desired := make(map[string]int, len(vms))
+	for name, vm := range vms {
+		desired[name] = vm.VMID
+	}
+	adoptions, err := vmsToAdopt(desired, stateAddrs, onProxmox)
+	if err != nil {
+		return err
+	}
+	for _, a := range adoptions {
+		r.logger.Info("adopting existing VM into tofu state", "vm", a.Name, "vmid", a.VMID)
+		if err := r.tofu.Import(ctx, vmAddress(a.Name), fmt.Sprintf("%s/%d", node, a.VMID)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// proxmoxVMs lists the VMs on a node of the local Proxmox host (vmid → name).
+func proxmoxVMs(ctx context.Context, node string) (map[int]string, error) {
+	out, err := exec.CommandContext(ctx, "pvesh", "get", fmt.Sprintf("/nodes/%s/qemu", node), "--output-format", "json").Output()
+	if err != nil {
+		return nil, fmt.Errorf("list Proxmox VMs: %w", err)
+	}
+	var vms []struct {
+		VMID int    `json:"vmid"`
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(out, &vms); err != nil {
+		return nil, fmt.Errorf("parse Proxmox VM list: %w", err)
+	}
+	byID := make(map[int]string, len(vms))
+	for _, vm := range vms {
+		byID[vm.VMID] = vm.Name
+	}
+	return byID, nil
+}
+
+// vmAddress is the tofu resource address of a VM in the proxmox module.
+func vmAddress(name string) string {
+	return fmt.Sprintf("proxmox_virtual_environment_vm.vm[%q]", name)
+}
+
+// adoption is an existing Proxmox VM to import into tofu state.
+type adoption struct {
+	Name string
+	VMID int
+}
+
+// vmsToAdopt returns the desired VMs (name → vmid) that tofu state does not
+// track but that already exist on Proxmox (vmid → name) under the same name.
+// Untracked VMs absent from Proxmox are left for tofu to create. A vmid held
+// by a differently named VM is an error: importing it would hand an unrelated
+// VM to proxops.
+func vmsToAdopt(desired map[string]int, stateAddrs []string, onProxmox map[int]string) ([]adoption, error) {
+	tracked := make(map[string]bool, len(stateAddrs))
+	for _, addr := range stateAddrs {
+		tracked[addr] = true
+	}
+	var out []adoption
+	for name, vmid := range desired {
+		if tracked[vmAddress(name)] {
+			continue
+		}
+		existing, ok := onProxmox[vmid]
+		if !ok {
+			continue
+		}
+		if existing != name {
+			return nil, fmt.Errorf("VM %q wants vmid %d, which Proxmox already uses for VM %q", name, vmid, existing)
+		}
+		out = append(out, adoption{Name: name, VMID: vmid})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
 }
 
 // nextAvailableVMID finds the lowest unused VMID in the given range.

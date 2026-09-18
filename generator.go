@@ -48,7 +48,14 @@ func (g *Generator) GenerateAll(services *ServicesFile, location string) (bool, 
 	return changed, nil
 }
 
-// generateDocoCDConfigs writes docker-compose.doco-cd.yml and doco-cd-poll.yml for a VM.
+// docoCDDir is the repo-relative directory holding a VM's doco-cd compose
+// and poll config. It is keyed by VM name (unique in services.yml), not by
+// service dir, because VMs at different locations can share a service dir.
+func docoCDDir(vmName string) string {
+	return filepath.Join("doco-cd", vmName)
+}
+
+// generateDocoCDConfigs writes docker-compose.yml and doco-cd-poll.yml into docoCDDir(vmName).
 func (g *Generator) generateDocoCDConfigs(vmName string, vm *VMConfig, services *ServicesFile) (bool, error) {
 	if len(vm.Services) == 0 {
 		// VM runs no docker services (e.g. a bare SSH/systemd VM) — nothing
@@ -56,27 +63,24 @@ func (g *Generator) generateDocoCDConfigs(vmName string, vm *VMConfig, services 
 		return false, nil
 	}
 	primary := vm.PrimaryService()
-	serviceDir := filepath.Join(g.cfg.RepoDir, primary.ServiceDir)
-
-	if _, err := os.Stat(serviceDir); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(g.cfg.RepoDir, primary.ServiceDir)); os.IsNotExist(err) {
 		g.logger.Warn("service directory does not exist, skipping", "vm", vmName, "dir", primary.ServiceDir)
 		return false, nil
 	}
 
+	docoDir := filepath.Join(g.cfg.RepoDir, docoCDDir(vmName))
 	changed := false
 
-	// docker-compose.doco-cd.yml
-	composePath := filepath.Join(serviceDir, "docker-compose.doco-cd.yml")
+	composePath := filepath.Join(docoDir, "docker-compose.yml")
 	composeContent := g.generateDocoCDCompose()
 	if c, err := writeIfChanged(composePath, composeContent); err != nil {
 		return false, err
 	} else if c {
-		g.logger.Info("wrote docker-compose.doco-cd.yml", "vm", vmName, "dir", primary.ServiceDir)
+		g.logger.Info("wrote doco-cd compose", "vm", vmName, "dir", docoCDDir(vmName))
 		changed = true
 	}
 
-	// doco-cd-poll.yml
-	pollPath := filepath.Join(serviceDir, "doco-cd-poll.yml")
+	pollPath := filepath.Join(docoDir, "doco-cd-poll.yml")
 	pollContent, err := g.generateDocoCDPoll(services.AllServices(vm))
 	if err != nil {
 		return false, err
@@ -84,7 +88,7 @@ func (g *Generator) generateDocoCDConfigs(vmName string, vm *VMConfig, services 
 	if c, err := writeIfChanged(pollPath, pollContent); err != nil {
 		return false, err
 	} else if c {
-		g.logger.Info("wrote doco-cd-poll.yml", "vm", vmName, "dir", primary.ServiceDir)
+		g.logger.Info("wrote doco-cd poll config", "vm", vmName, "dir", docoCDDir(vmName))
 		changed = true
 	}
 

@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // TofuRunner generates tfvars from services.yml and runs `tofu apply`.
@@ -105,27 +107,102 @@ func (t *TofuRunner) Init(ctx context.Context) error {
 	return t.run(ctx, "init")
 }
 
-// Apply runs `tofu apply -auto-approve`.
-func (t *TofuRunner) Apply(ctx context.Context) error {
-	t.logger.Info("running tofu apply")
-	return t.run(ctx, "apply", "-auto-approve")
+// StateList returns the resource addresses tracked in tofu state.
+func (t *TofuRunner) StateList(ctx context.Context) ([]string, error) {
+	if _, err := os.Stat(filepath.Join(t.tofuDir, "terraform.tfstate")); os.IsNotExist(err) {
+		return nil, nil // never applied: nothing tracked
+	}
+	cmd := exec.CommandContext(ctx, "tofu", "state", "list")
+	cmd.Dir = t.tofuDir
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("tofu state list: %w", err)
+	}
+	return strings.Fields(string(out)), nil
 }
 
-// Plan runs `tofu plan` and returns true if there are changes.
-func (t *TofuRunner) Plan(ctx context.Context) (bool, error) {
+// Import brings an existing resource under tofu management.
+func (t *TofuRunner) Import(ctx context.Context, address, id string) error {
+	t.logger.Info("running tofu import", "address", address, "id", id)
+	return t.run(ctx, "import", "-input=false", address, id)
+}
+
+// PlanAndApply runs `tofu plan`, refuses any plan that would delete a
+// resource (outright or via replace), and otherwise applies exactly the plan
+// it checked. Returns true if a plan was applied.
+func (t *TofuRunner) PlanAndApply(ctx context.Context) (bool, error) {
+	// The plan file must live outside the repo: proxops commits with `git add -A`.
+	f, err := os.CreateTemp("", "proxops-*.tfplan")
+	if err != nil {
+		return false, fmt.Errorf("create plan file: %w", err)
+	}
+	planPath := f.Name()
+	_ = f.Close()
+	defer func() { _ = os.Remove(planPath) }()
+
 	t.logger.Info("running tofu plan")
-	cmd := exec.CommandContext(ctx, "tofu", "plan", "-detailed-exitcode")
+	cmd := exec.CommandContext(ctx, "tofu", "plan", "-input=false", "-detailed-exitcode", "-out="+planPath)
 	cmd.Dir = t.tofuDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err == nil {
-		return false, nil // exit 0 = no changes
+	err = cmd.Run()
+	var exitErr *exec.ExitError
+	switch {
+	case err == nil:
+		return false, nil // exit 0: no changes
+	case errors.As(err, &exitErr) && exitErr.ExitCode() == 2:
+		// exit 2: changes present, check them below
+	default:
+		return false, fmt.Errorf("tofu plan: %w", err)
 	}
-	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 2 {
-		return true, nil // exit 2 = changes present
+
+	show := exec.CommandContext(ctx, "tofu", "show", "-json", planPath)
+	show.Dir = t.tofuDir
+	show.Stderr = os.Stderr
+	planJSON, err := show.Output()
+	if err != nil {
+		return false, fmt.Errorf("tofu show: %w", err)
 	}
-	return false, fmt.Errorf("tofu plan: %w", err)
+	deletes, err := destructiveChanges(planJSON)
+	if err != nil {
+		return false, err
+	}
+	if len(deletes) > 0 {
+		return false, fmt.Errorf("refusing to apply: plan would delete %s", strings.Join(deletes, ", "))
+	}
+
+	t.logger.Info("running tofu apply")
+	if err := t.run(ctx, "apply", "-input=false", planPath); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// destructiveChanges returns the addresses of resources that a plan (the
+// JSON from `tofu show -json <planfile>`) would delete, including replaces.
+func destructiveChanges(planJSON []byte) ([]string, error) {
+	var plan struct {
+		ResourceChanges []struct {
+			Address string `json:"address"`
+			Change  struct {
+				Actions []string `json:"actions"`
+			} `json:"change"`
+		} `json:"resource_changes"`
+	}
+	if err := json.Unmarshal(planJSON, &plan); err != nil {
+		return nil, fmt.Errorf("parse plan JSON: %w", err)
+	}
+	var addrs []string
+	for _, rc := range plan.ResourceChanges {
+		for _, action := range rc.Change.Actions {
+			if action == "delete" {
+				addrs = append(addrs, rc.Address)
+				break
+			}
+		}
+	}
+	return addrs, nil
 }
 
 func (t *TofuRunner) run(ctx context.Context, args ...string) error {
