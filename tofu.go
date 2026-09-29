@@ -25,28 +25,30 @@ func NewTofuRunner(tofuDir string, logger *slog.Logger) *TofuRunner {
 
 // TofuVM is the per-VM structure written into terraform.tfvars.json.
 type TofuVM struct {
-	VMID     int      `json:"vmid"`
-	Name     string   `json:"name"`
-	Cores    int      `json:"cores"`
-	MemoryMB int      `json:"memory_mb"`
-	DiskGB   int      `json:"disk_gb"`
-	CPUType  string   `json:"cpu_type"`
-	StaticIP string   `json:"static_ip"`
+	VMID     int    `json:"vmid"`
+	Name     string `json:"name"`
+	Cores    int    `json:"cores"`
+	MemoryMB int    `json:"memory_mb"`
+	DiskGB   int    `json:"disk_gb"`
+	CPUType  string `json:"cpu_type"`
+	StaticIP string `json:"static_ip"`
+	// TemplateVMID is the template this VM is cloned from.
+	TemplateVMID int `json:"template_vmid"`
 }
 
 // TofuVars is the top-level structure for terraform.tfvars.json.
 type TofuVars struct {
-	ProxmoxAPIURL     string            `json:"proxmox_api_url"`
-	ProxmoxTokenID    string            `json:"proxmox_token_id"`
-	ProxmoxTokenSecret string           `json:"proxmox_token_secret"`
-	ProxmoxNode       string            `json:"proxmox_node"`
-	TemplateVMID      int               `json:"template_vmid"`
-	Gateway           string            `json:"gateway"`
-	DNSServers        []string          `json:"dns_servers"`
-	Netmask           int               `json:"netmask"`
-	CloudInitDatastore string           `json:"cloud_init_datastore"`
-	SSHUser           string            `json:"ssh_user"`
-	VMs               map[string]TofuVM `json:"vms"`
+	ProxmoxAPIURL      string            `json:"proxmox_api_url"`
+	ProxmoxTokenID     string            `json:"proxmox_token_id"`
+	ProxmoxTokenSecret string            `json:"proxmox_token_secret"`
+	ProxmoxNode        string            `json:"proxmox_node"`
+	TemplateVMID       int               `json:"template_vmid"`
+	Gateway            string            `json:"gateway"`
+	DNSServers         []string          `json:"dns_servers"`
+	Netmask            int               `json:"netmask"`
+	CloudInitDatastore string            `json:"cloud_init_datastore"`
+	SSHUser            string            `json:"ssh_user"`
+	VMs                map[string]TofuVM `json:"vms"`
 }
 
 // GenerateVars builds terraform.tfvars.json from services.yml for a location.
@@ -75,13 +77,14 @@ func (t *TofuRunner) GenerateVars(services *ServicesFile, location string, proxm
 			return fmt.Errorf("VM %q missing vmid or static_ip — assign before running tofu", vmName)
 		}
 		vars.VMs[vmName] = TofuVM{
-			VMID:     vm.VMID,
-			Name:     vmName,
-			Cores:    vm.EffectiveCores(services.VMDefaults),
-			MemoryMB: vm.EffectiveMemoryMB(services.VMDefaults),
-			DiskGB:   vm.EffectiveDiskGB(services.VMDefaults),
-			CPUType:  vm.EffectiveCPUType(services.VMDefaults),
-			StaticIP: vm.StaticIP,
+			VMID:         vm.VMID,
+			Name:         vmName,
+			Cores:        vm.EffectiveCores(services.VMDefaults),
+			MemoryMB:     vm.EffectiveMemoryMB(services.VMDefaults),
+			DiskGB:       vm.EffectiveDiskGB(services.VMDefaults),
+			CPUType:      vm.EffectiveCPUType(services.VMDefaults),
+			StaticIP:     vm.StaticIP,
+			TemplateVMID: vm.EffectiveTemplateVMID(services.VMDefaults),
 		}
 	}
 
