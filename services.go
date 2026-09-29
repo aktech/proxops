@@ -9,12 +9,12 @@ import (
 
 // ServicesFile represents the top-level ansible/services.yml.
 type ServicesFile struct {
-	Domain           string                       `yaml:"domain"`
-	ProxmoxHosts     map[string]ProxmoxHostConfig `yaml:"proxmox_hosts"`
-	VMDefaults       VMDefaults                   `yaml:"vm_defaults"`
-	GlobalServices   []VMService                  `yaml:"global_services,omitempty"`
-	VMs              map[string]*VMConfig         `yaml:"vms"`
-	Devices          map[string][]DeviceRoute     `yaml:"devices"`
+	Domain         string                       `yaml:"domain"`
+	ProxmoxHosts   map[string]ProxmoxHostConfig `yaml:"proxmox_hosts"`
+	VMDefaults     VMDefaults                   `yaml:"vm_defaults"`
+	GlobalServices []VMService                  `yaml:"global_services,omitempty"`
+	VMs            map[string]*VMConfig         `yaml:"vms"`
+	Devices        map[string][]DeviceRoute     `yaml:"devices"`
 	ProxOpsVersion string                       `yaml:"proxops_version,omitempty"`
 }
 
@@ -54,15 +54,18 @@ type VMDefaults struct {
 }
 
 type VMConfig struct {
-	Location  string      `yaml:"location"`
-	VMID      int         `yaml:"vmid,omitempty"`
-	StaticIP  string      `yaml:"static_ip,omitempty"`
-	Cores     int         `yaml:"cores,omitempty"`
-	MemoryMB  int         `yaml:"memory_mb,omitempty"`
-	DiskGB    int         `yaml:"disk_gb,omitempty"`
-	CPUType   string      `yaml:"cpu_type,omitempty"`
-	Services  []VMService `yaml:"services"`
-	Routes    []VMRoute   `yaml:"routes,omitempty"`
+	Location string `yaml:"location"`
+	// TemplateVMID clones this VM from a specific template instead of
+	// vm_defaults.template_vmid (templates differ per Proxmox host).
+	TemplateVMID int         `yaml:"template_vmid,omitempty"`
+	VMID         int         `yaml:"vmid,omitempty"`
+	StaticIP     string      `yaml:"static_ip,omitempty"`
+	Cores        int         `yaml:"cores,omitempty"`
+	MemoryMB     int         `yaml:"memory_mb,omitempty"`
+	DiskGB       int         `yaml:"disk_gb,omitempty"`
+	CPUType      string      `yaml:"cpu_type,omitempty"`
+	Services     []VMService `yaml:"services"`
+	Routes       []VMRoute   `yaml:"routes,omitempty"`
 }
 
 type VMService struct {
@@ -132,6 +135,14 @@ func (vm *VMConfig) PrimaryService() VMService {
 		}
 	}
 	return vm.Services[0]
+}
+
+// EffectiveTemplateVMID returns the VM's template or the default.
+func (vm *VMConfig) EffectiveTemplateVMID(defaults VMDefaults) int {
+	if vm.TemplateVMID > 0 {
+		return vm.TemplateVMID
+	}
+	return defaults.TemplateVMID
 }
 
 // EffectiveCores returns the VM's cores or the default.
