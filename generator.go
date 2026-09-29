@@ -129,6 +129,11 @@ type pollDeployment struct {
 	ForceRecreate  bool     `yaml:"force_recreate"`
 	RemoveOrphans  bool     `yaml:"remove_orphans"`
 	ForceImagePull bool     `yaml:"force_image_pull"`
+	// PruneImages is always false: doco-cd's post-deploy prune failed with
+	// "No such image" on stacks that build images locally, which marked
+	// the deploy failed and made doco-cd redeploy (and recreate
+	// containers) every poll.
+	PruneImages bool `yaml:"prune_images"`
 }
 
 type pollConfig struct {
@@ -149,6 +154,7 @@ func (g *Generator) generateDocoCDPoll(services []VMService) (string, error) {
 			ForceRecreate:  false,
 			RemoveOrphans:  true,
 			ForceImagePull: false,
+			PruneImages:    false,
 		})
 	}
 	config := []pollConfig{{
