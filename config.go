@@ -8,6 +8,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// DefaultDocoCDImage is the Doco-CD release the generated compose files run,
+// pinned by digest (kimdre/doco-cd v0.134.0, 2026-11-13, linux/amd64+arm64).
+const DefaultDocoCDImage = "ghcr.io/kimdre/doco-cd:0.134.0@sha256:1d40f570403689c762c63009ade3d5d0dc24595bf40f9629a8ab3865e4ddb768"
+
 // Config represents the provisioner config file (e.g. /opt/proxops/config.yml).
 type Config struct {
 	Location     string        `yaml:"location"`
@@ -65,7 +69,7 @@ func LoadConfig(path string) (*Config, error) {
 		RepoDir:        "/opt/proxops/repo",
 		DefaultUser:    "ubuntu",
 		DataDir:        "/opt/proxops",
-		DocoCDImage:    "ghcr.io/kimdre/doco-cd:0.67.1",
+		DocoCDImage:    DefaultDocoCDImage,
 		GitReference:   "refs/heads/main",
 		DocoCDInterval: 120,
 		Timezone:       "UTC",

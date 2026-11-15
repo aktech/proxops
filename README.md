@@ -70,7 +70,7 @@ poll_interval: 60s                 # How often to run reconciliation
 default_user: ubuntu               # SSH user for VMs
 data_dir: /opt/proxops           # Data directory on VMs
 timezone: UTC                      # Timezone for Doco-CD containers
-doco_cd_image: ghcr.io/kimdre/doco-cd:0.67.1
+doco_cd_image: ghcr.io/kimdre/doco-cd:0.134.0@sha256:1d40f570403689c762c63009ade3d5d0dc24595bf40f9629a8ab3865e4ddb768
 git_reference: refs/heads/main
 doco_cd_poll_interval: 120         # Doco-CD poll interval in seconds
 committer_email: proxops@localhost

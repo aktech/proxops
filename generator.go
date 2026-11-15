@@ -8,6 +8,8 @@ import (
 	"sort"
 
 	"gopkg.in/yaml.v3"
+	"net/url"
+	"strings"
 )
 
 // Generator creates doco-cd configs and traefik routing rules from services.yml.
@@ -97,6 +99,8 @@ func (g *Generator) generateDocoCDConfigs(vmName string, vm *VMConfig, services 
 
 func (g *Generator) generateDocoCDCompose() string {
 	envFilePath := filepath.Join(g.cfg.DataDir, "doco-cd.env")
+	// GIT_AUTH_DOMAINS scopes the global GIT_ACCESS_TOKEN (from the env file)
+	// to the repository's host; Doco-CD 0.130+ refuses to start without it.
 	return fmt.Sprintf(`services:
   doco-cd:
     container_name: doco-cd
@@ -106,9 +110,12 @@ func (g *Generator) generateDocoCDCompose() string {
       - path: %s
         required: false
     environment:
-      - POLL_CONFIG_FILE=/poll-config.yml
-      - TZ=%s
-      - LOG_LEVEL=info
+      POLL_CONFIG_FILE: /poll-config.yml
+      TZ: %s
+      LOG_LEVEL: info
+      GIT_AUTH_DOMAINS: |
+        - domains:
+            - %s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - doco-cd-data:/data
@@ -117,7 +124,21 @@ func (g *Generator) generateDocoCDCompose() string {
 
 volumes:
   doco-cd-data:
-`, g.cfg.DocoCDImage, envFilePath, g.cfg.Timezone, envFilePath)
+`, g.cfg.DocoCDImage, envFilePath, g.cfg.Timezone, gitHost(g.cfg.RepoURL), envFilePath)
+}
+
+// gitHost is the host of a repository URL (HTTPS with or without a token, or
+// scp-style git@host:path), github.com when it cannot be read.
+func gitHost(repoURL string) string {
+	if u, err := url.Parse(repoURL); err == nil && u.Hostname() != "" {
+		return u.Hostname()
+	}
+	if at := strings.Index(repoURL, "@"); at >= 0 {
+		if rest := repoURL[at+1:]; strings.Contains(rest, ":") {
+			return rest[:strings.Index(rest, ":")]
+		}
+	}
+	return "github.com"
 }
 
 // pollDeployment mirrors the YAML structure of doco-cd-poll.yml.
